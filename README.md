@@ -48,6 +48,8 @@ En **Lo que sé de ti** (botón en la pantalla de inicio, o el icono ✨) hay tr
 2. **Lo que dicen los estudios** — inferencias apoyadas en investigaciones reales que se han podido comprobar, cada una con un «Por qué» y un enlace. Si tu patrón va al revés de lo habitual, también se dice. La encuesta de LG (2016) sobre «ansiedad por batería baja» se cita como encuesta comercial, no como paper.
 3. **Lo que creo de ti** — especulaciones atrevidas al estilo de un horóscopo (carácter, ánimo, hábitos), con un indicador de confianza. Es un juego, no un diagnóstico.
 
+En la pantalla de inicio (y al terminar una ronda o ver tu retrato) hay un botón **Compartir**: usa el menú nativo del móvil, o copia el enlace y abre WhatsApp. El enlace incluye una vista previa para chats.
+
 ## Desarrollo
 
 Sitio estático: `index.html`, `styles.css`, `app.js`, `analysis.js`. Sin paso de compilación.

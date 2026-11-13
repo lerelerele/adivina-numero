@@ -1,7 +1,7 @@
-/* Oráculo service worker v3 — network-first for HTML/JS/CSS, cache fallback offline. */
+/* Oráculo service worker v4 — network-first for HTML/JS/CSS, cache fallback offline. */
 'use strict';
 
-const CACHE = 'oraculo-v3';
+const CACHE = 'oraculo-v4';
 const ASSETS = [
   './',
   './index.html',
@@ -13,7 +13,8 @@ const ASSETS = [
   './icons/icon-512.png',
   './icons/apple-touch-icon.png',
   './icons/favicon-32.png',
-  './icons/favicon-64.png'
+  './icons/favicon-64.png',
+  './icons/og-1200x630.png'
 ];
 
 function isShellRequest(url) {

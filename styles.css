@@ -788,3 +788,19 @@ canvas.confetti {
   letter-spacing: 0.12em;
   font-weight: 700;
 }
+
+.share-url {
+  font-size: 13px;
+  word-break: break-all;
+  background: rgba(255,255,255,0.05);
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: var(--cyan);
+  margin: 0 0 14px;
+}
+.btn-share {
+  background: rgba(34, 211, 238, 0.12);
+  color: #e0faff;
+  border: 1px solid rgba(34, 211, 238, 0.35);
+}
+a.btn { text-decoration: none; }

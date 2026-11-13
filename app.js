@@ -6,7 +6,7 @@
    ============================================================ */
 
 const STORAGE_KEY = 'oraculo-v1';
-const APP_VERSION = 'v3';
+const APP_VERSION = 'v4';
 const MONTHS = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const WEEKDAYS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
 const WEEKDAYS_MON = ['lunes','martes','miércoles','jueves','viernes','sábado','domingo'];
@@ -1402,6 +1402,69 @@ function starsHtml() {
   ).join('') + '</div>';
 }
 
+
+const SHARE_URL = 'https://lerelerele.github.io/adivina-numero/';
+const SHARE_TITLE = 'Or\u00e1culo \u2014 Adivino tu n\u00famero';
+const SHARE_TEXT_DEFAULT = 'Adivino el n\u00famero que est\u00e1s pensando seg\u00fan tu entorno, y aprendo tu patr\u00f3n. \u00bfTe atreves?';
+
+function shareApp(custom) {
+  const title = (custom && custom.title) || SHARE_TITLE;
+  const text = (custom && custom.text) || SHARE_TEXT_DEFAULT;
+  const url = SHARE_URL;
+  const go = async () => {
+    if (typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ title: title, text: text, url: url });
+        return;
+      } catch (e) {
+        if (e && e.name === 'AbortError') return;
+      }
+    }
+    await fallbackShare(text, url);
+  };
+  go();
+}
+
+async function fallbackShare(text, url) {
+  let copied = false;
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(url);
+      copied = true;
+    }
+  } catch (_) {}
+  toast(copied ? 'Enlace copiado al portapapeles' : 'Copia el enlace para compartirlo');
+  showShareSheet(text, url, copied);
+}
+
+function showShareSheet(text, url, copied) {
+  const prev = document.querySelector('.overlay.share-sheet');
+  if (prev) prev.remove();
+  const wa = 'https://wa.me/?text=' + encodeURIComponent(text + ' ' + url);
+  const ov = $('<div class="overlay share-sheet"><div class="sheet">' +
+    '<h2>Compartir</h2>' +
+    '<p>' + (copied ? 'He copiado el enlace. ' : '') +
+      'M\u00e1ndaselo a quien quieras, o \u00e1brelo en WhatsApp.</p>' +
+    '<p class="share-url">' + esc(url) + '</p>' +
+    '<div class="stack-tight">' +
+      '<a class="btn btn-yes" href="' + esc(wa) + '" target="_blank" rel="noopener">Abrir WhatsApp</a>' +
+      '<button class="btn btn-ghost" id="shareClose" type="button">Cerrar</button>' +
+    '</div></div></div>');
+  document.body.appendChild(ov);
+  ov.querySelector('#shareClose').onclick = () => ov.remove();
+  ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
+}
+
+function resultShareText(entry) {
+  if (entry && entry.attempts === 1) {
+    return '\u00a1El Or\u00e1culo me adivin\u00f3 el n\u00famero a la primera! \u00bfTe atreves?';
+  }
+  if (entry && entry.attempts) {
+    return 'El Or\u00e1culo adivin\u00f3 el n\u00famero en el que pensaba. \u00bfTe atreves a probar?';
+  }
+  return SHARE_TEXT_DEFAULT;
+}
+
 function renderHome() {
   const st = computeStats(store);
   const needIOS = typeof DeviceOrientationEvent !== 'undefined' &&
@@ -1437,6 +1500,7 @@ function renderHome() {
         (needIOS ? '<button class="btn btn-ghost" id="btnSensors" type="button">Activar sensores de movimiento</button>' : '') +
         '<button class="btn btn-primary" id="btnStart" type="button">Empezar</button>' +
         '<button class="btn btn-portrait" id="btnPortrait" type="button">\u2728 Lo que s\u00e9 de ti</button>' +
+        '<button class="btn btn-share" id="btnShare" type="button">Compartir</button>' +
         '<p class="tiny">Tus respuestas se quedan en este m\u00f3vil. Fase ' + (store.phase + 1) + '.</p>' +
         '<p class="version-label">' + APP_VERSION + '</p>' +
       '</div>' +
@@ -1449,6 +1513,8 @@ function renderHome() {
   const bp = document.getElementById('btnPortrait');
   if (bp) bp.onclick = () => showPortrait();
   document.getElementById('btnStart').onclick = () => startRound();
+  const bshare = document.getElementById('btnShare');
+  if (bshare) bshare.onclick = () => shareApp();
   const bs = document.getElementById('btnSensors');
   if (bs) {
     bs.onclick = async () => {
@@ -1743,11 +1809,14 @@ function renderResult(entry, outcome, prevPhase, ch) {
       '</div>' +
       '<div class="stack">' +
         '<button class="btn btn-primary" id="btnNext" type="button">Siguiente ronda</button>' +
+        '<button class="btn btn-share" id="btnShareResult" type="button">Compartir</button>' +
         '<button class="btn btn-ghost" id="btnHome" type="button">Inicio</button>' +
       '</div>' +
     '</div>';
   document.getElementById('btnNext').onclick = () => startRound();
   document.getElementById('btnHome').onclick = () => renderHome();
+  const bsr = document.getElementById('btnShareResult');
+  if (bsr) bsr.onclick = () => shareApp({ text: resultShareText(entry) });
 }
 
 
@@ -1881,6 +1950,7 @@ function showPortrait() {
       '<div class="disclaimer">Esto es un juego, no un diagn\u00f3stico. La primera parte son datos; la segunda, lecturas con estudios que he podido comprobar; la tercera es pura especulaci\u00f3n, tan libre como un hor\u00f3scopo. Nada de esto describe tu salud ni tu personalidad cl\u00ednica.</div>' +
       '<div class="stack">' +
         '<button class="btn btn-primary" id="btnPlay" type="button">Seguir jugando</button>' +
+        '<button class="btn btn-share" id="btnSharePortrait" type="button">Compartir</button>' +
         '<button class="btn btn-ghost" id="btnHome" type="button">Inicio</button>' +
         '<p class="version-label">' + APP_VERSION + '</p>' +
       '</div>' +
@@ -1888,6 +1958,8 @@ function showPortrait() {
   document.getElementById('btnBack').onclick = () => renderHome();
   document.getElementById('btnHome').onclick = () => renderHome();
   document.getElementById('btnPlay').onclick = () => startRound();
+  const bsp = document.getElementById('btnSharePortrait');
+  if (bsp) bsp.onclick = () => shareApp({ text: 'El Or\u00e1culo est\u00e1 leyendo mi mente\u2026 \u00bfTe atreves a probar?' });
 }
 
 function showStats() {
@@ -2172,6 +2244,11 @@ if (typeof module !== 'undefined' && module.exports) {
     moonPhase,
     timeBand,
     speedBand,
-    sinceBand
+    sinceBand,
+    shareApp,
+    resultShareText,
+    SHARE_URL,
+    SHARE_TEXT_DEFAULT,
+    SHARE_TITLE
   };
 }
