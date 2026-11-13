@@ -770,3 +770,21 @@ canvas.confetti {
   line-height: 1.5;
 }
 .fuentes a { color: var(--cyan); }
+
+.btn-portrait {
+  background: rgba(167, 139, 250, 0.2);
+  color: #f5f3ff;
+  border: 1.5px solid var(--violet);
+  box-shadow: 0 8px 22px rgba(124, 92, 252, 0.22);
+  font-size: 1.08rem;
+}
+.btn-portrait:active { background: rgba(167, 139, 250, 0.32); }
+.version-label {
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+  opacity: 0.75;
+  margin: 10px 0 0;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+}

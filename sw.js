@@ -1,7 +1,7 @@
-/* Oráculo service worker — cache-first for the app shell, network for APIs. */
+/* Oráculo service worker v3 — network-first for HTML/JS/CSS, cache fallback offline. */
 'use strict';
 
-const CACHE = 'oraculo-v2';
+const CACHE = 'oraculo-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -15,6 +15,15 @@ const ASSETS = [
   './icons/favicon-32.png',
   './icons/favicon-64.png'
 ];
+
+function isShellRequest(url) {
+  const p = url.pathname;
+  if (/\.(html|js|css)$/i.test(p)) return true;
+  if (p.endsWith('/')) return true;
+  // GitHub Pages path without trailing slash
+  if (/\/adivina-numero$/i.test(p)) return true;
+  return false;
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -36,6 +45,21 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
+  if (isShellRequest(url) || req.mode === 'navigate') {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((cache) => cache.put(req, copy)).catch(() => {});
+          }
+          return res;
+        })
+        .catch(() => caches.match(req).then((c) => c || caches.match('./index.html')))
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(req).then((cached) => {
       const fetched = fetch(req)
@@ -46,7 +70,7 @@ self.addEventListener('fetch', (event) => {
           }
           return res;
         })
-        .catch(() => cached || caches.match('./index.html'));
+        .catch(() => cached);
       return cached || fetched;
     })
   );

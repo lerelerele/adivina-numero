@@ -6,6 +6,7 @@
    ============================================================ */
 
 const STORAGE_KEY = 'oraculo-v1';
+const APP_VERSION = 'v3';
 const MONTHS = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const WEEKDAYS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
 const WEEKDAYS_MON = ['lunes','martes','miércoles','jueves','viernes','sábado','domingo'];
@@ -1434,9 +1435,10 @@ function renderHome() {
         '</div></div>' : '') +
       '<div class="stack">' +
         (needIOS ? '<button class="btn btn-ghost" id="btnSensors" type="button">Activar sensores de movimiento</button>' : '') +
-        '<button class="btn btn-ghost" id="btnPortrait" type="button">Lo que s\u00e9 de ti</button>' +
         '<button class="btn btn-primary" id="btnStart" type="button">Empezar</button>' +
+        '<button class="btn btn-portrait" id="btnPortrait" type="button">\u2728 Lo que s\u00e9 de ti</button>' +
         '<p class="tiny">Tus respuestas se quedan en este m\u00f3vil. Fase ' + (store.phase + 1) + '.</p>' +
+        '<p class="version-label">' + APP_VERSION + '</p>' +
       '</div>' +
     '</div>';
 
@@ -1880,6 +1882,7 @@ function showPortrait() {
       '<div class="stack">' +
         '<button class="btn btn-primary" id="btnPlay" type="button">Seguir jugando</button>' +
         '<button class="btn btn-ghost" id="btnHome" type="button">Inicio</button>' +
+        '<p class="version-label">' + APP_VERSION + '</p>' +
       '</div>' +
     '</div>';
   document.getElementById('btnBack').onclick = () => renderHome();
@@ -2107,26 +2110,33 @@ function burstConfetti() {
 
 function registerSW() {
   if (!('serviceWorker' in navigator)) return;
-  navigator.serviceWorker.register('./sw.js').then((reg) => {
-    if (reg.waiting) {
-      try { reg.waiting.postMessage({ type: 'SKIP_WAITING' }); } catch (_) {}
-    }
-    reg.addEventListener('updatefound', () => {
-      const nw = reg.installing;
-      if (!nw) return;
-      nw.addEventListener('statechange', () => {
-        if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-          toast('Hay una versi\u00f3n nueva. Recarga la p\u00e1gina para verla.');
-        }
-      });
-    });
-  }).catch((e) => console.warn('SW', e));
   let refreshing = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (refreshing) return;
     refreshing = true;
     location.reload();
   });
+  navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then((reg) => {
+    const askSkip = () => {
+      if (reg.waiting) {
+        try { reg.waiting.postMessage({ type: 'SKIP_WAITING' }); } catch (_) {}
+      }
+    };
+    askSkip();
+    reg.addEventListener('updatefound', () => {
+      const nw = reg.installing;
+      if (!nw) return;
+      nw.addEventListener('statechange', () => {
+        if (nw.state === 'installed' && navigator.serviceWorker.controller) askSkip();
+      });
+    });
+    const check = () => { reg.update().catch(() => {}); };
+    check();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') check();
+    });
+    window.addEventListener('focus', check);
+  }).catch((e) => console.warn('SW', e));
 }
 
 function init() {
