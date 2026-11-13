@@ -39,11 +39,21 @@ Un modelo ligero (priors de posición y números favoritos, Naive Bayes sobre el
 
 Funciona sin conexión para la lógica del juego (service worker). El clima y el mapa necesitan red.
 
+
+## Lo que sé / lo que dicen los estudios / lo que creo
+
+En **Lo que sé de ti** (botón en la pantalla de inicio, o el icono ✨) hay tres capas, que se van abriendo a las 5, 20 y 50 partidas:
+
+1. **Lo que sé de ti** — solo hechos de tus respuestas, con recuentos (números favoritos, si eliges el primero o el del medio, si evitas repetir, a qué hora confirmas más rápido, batería, lugar…).
+2. **Lo que dicen los estudios** — inferencias apoyadas en investigaciones reales que se han podido comprobar, cada una con un «Por qué» y un enlace. Si tu patrón va al revés de lo habitual, también se dice. La encuesta de LG (2016) sobre «ansiedad por batería baja» se cita como encuesta comercial, no como paper.
+3. **Lo que creo de ti** — especulaciones atrevidas al estilo de un horóscopo (carácter, ánimo, hábitos), con un indicador de confianza. Es un juego, no un diagnóstico.
+
 ## Desarrollo
 
-Sitio estático: `index.html`, `styles.css`, `app.js`. Sin paso de compilación.
+Sitio estático: `index.html`, `styles.css`, `app.js`, `analysis.js`. Sin paso de compilación.
 
 ```bash
-node --check app.js
+node --check app.js analysis.js sw.js
 node test-model.js
+node test-portrait.js
 ```

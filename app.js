@@ -1412,6 +1412,7 @@ function renderHome() {
     '<div class="screen">' +
       '<div class="top-row">' +
         '<button class="icon-btn" data-go="signals" title="Se\u00f1ales" aria-label="Se\u00f1ales">\uD83D\uDCE1</button>' +
+        '<button class="icon-btn" data-go="portrait" title="Lo que s\u00e9 de ti" aria-label="Lo que s\u00e9 de ti">\u2728</button>' +
         '<button class="icon-btn" data-go="stats" title="Estad\u00edsticas" aria-label="Estad\u00edsticas">\uD83D\uDCCA</button>' +
       '</div>' +
       '<div class="home-hero">' +
@@ -1433,6 +1434,7 @@ function renderHome() {
         '</div></div>' : '') +
       '<div class="stack">' +
         (needIOS ? '<button class="btn btn-ghost" id="btnSensors" type="button">Activar sensores de movimiento</button>' : '') +
+        '<button class="btn btn-ghost" id="btnPortrait" type="button">Lo que s\u00e9 de ti</button>' +
         '<button class="btn btn-primary" id="btnStart" type="button">Empezar</button>' +
         '<p class="tiny">Tus respuestas se quedan en este m\u00f3vil. Fase ' + (store.phase + 1) + '.</p>' +
       '</div>' +
@@ -1440,6 +1442,10 @@ function renderHome() {
 
   root().querySelector('[data-go="stats"]').onclick = () => showStats();
   root().querySelector('[data-go="signals"]').onclick = () => showSignalsInfo();
+  const goP = root().querySelector('[data-go="portrait"]');
+  if (goP) goP.onclick = () => showPortrait();
+  const bp = document.getElementById('btnPortrait');
+  if (bp) bp.onclick = () => showPortrait();
   document.getElementById('btnStart').onclick = () => startRound();
   const bs = document.getElementById('btnSensors');
   if (bs) {
@@ -1742,6 +1748,145 @@ function renderResult(entry, outcome, prevPhase, ch) {
   document.getElementById('btnHome').onclick = () => renderHome();
 }
 
+
+function confPips(level) {
+  const lv = level || 'baja';
+  const cls = lv === 'alta' ? 'alta' : (lv === 'media' ? 'media' : (lv === 'muy baja' ? 'muy-baja' : 'baja'));
+  return '<div class="conf-row"><span class="conf-pips ' + cls + '"><i></i><i></i><i></i></span>' +
+    '<span class="conf-tag ' + cls + '">confianza ' + esc(lv) + '</span></div>';
+}
+
+function citeHtml(cites) {
+  if (!cites || !cites.length) return '';
+  return '<ul class="cite-list">' + cites.map((c) =>
+    '<li>' + esc(c.full) + (c.url ? ' <a href="' + esc(c.url) + '" target="_blank" rel="noopener">' + esc(c.url) + '</a>' : '') + '</li>'
+  ).join('') + '</ul>';
+}
+
+function lockedBox(count, gate, missing, kind) {
+  if (!count && !gate) return '';
+  const n = count || 0;
+  if (!gate) return '';
+  const what = kind === 'facts' ? 'datos' : (kind === 'studies' ? 'lecturas de estudios' : 'adivinaciones');
+  const extra = n ? ('Hay ' + n + ' ' + what + ' m\u00e1s esperando. ') : '';
+  return '<div class="locked-hint">\uD83D\uDD12 ' + extra + 'Se abre m\u00e1s a las ' + gate +
+    ' partidas (te faltan ' + missing + ').</div>';
+}
+
+function showPortrait() {
+  const p = analyzePortrait(store);
+  const gates = [5, 20, 50];
+  const segs = gates.map((g, i) => {
+    const prev = i === 0 ? 0 : gates[i - 1];
+    let cls = '';
+    if (p.n >= g) cls = 'on';
+    else if (p.n > prev) cls = 'partial';
+    return '<div class="pp-seg ' + cls + '"></div>';
+  }).join('');
+  const gateLabels = gates.map((g) =>
+    '<span class="' + (p.n >= g ? 'hit' : '') + '">' + g + '</span>'
+  ).join('');
+
+  const progress = '<div class="portrait-progress">' +
+    '<div class="pp-label"><span>C\u00f3mo te voy conociendo</span><span>' + p.n +
+      (p.nextGate ? ' / ' + p.nextGate : ' pruebas') + '</span></div>' +
+    '<div class="pp-track">' + segs + '</div>' +
+    '<div class="pp-gates"><span>0</span>' + gateLabels + '</div>' +
+    (p.nextGate
+      ? '<p class="tiny" style="text-align:left;margin:8px 0 0">A las 5, 20 y 50 partidas se revelan m\u00e1s capas. Te faltan ' + p.missing + ' para el siguiente umbral.</p>'
+      : '<p class="tiny" style="text-align:left;margin:8px 0 0">Has abierto todas las capas. El retrato se sigue afinando con cada ronda.</p>') +
+  '</div>';
+
+  let factsHtml;
+  if (p.n < 5) {
+    factsHtml = '<div class="empty-portrait">Juega al menos 5 pruebas para que pueda decirte hechos con n\u00fameros. Llevas ' + p.n + '.</div>';
+  } else if (!p.facts.length) {
+    factsHtml = '<div class="empty-portrait">A\u00fan no tengo hechos suficientes. Sigue jugando.</div>';
+  } else {
+    factsHtml = p.facts.map((f) =>
+      '<article class="portrait-card facts"><h3>' + esc(f.title) + '</h3><p>' + esc(f.text) + '</p></article>'
+    ).join('');
+  }
+  factsHtml += lockedBox(p.factsLocked.length, p.nextGate, p.missing, 'facts');
+
+  let studiesHtml;
+  if (p.n < 5) {
+    studiesHtml = '<div class="empty-portrait">Cuando haya unas cuantas partidas, cruzar\u00e9 tus respuestas con estudios reales (y te dir\u00e9 cu\u00e1les).</div>';
+  } else if (!p.studies.length) {
+    studiesHtml = '<div class="empty-portrait">Todav\u00eda no hay un patr\u00f3n bastante claro como para apoyarme en un estudio. Sigue jugando: a veces hace falta contraste.</div>';
+  } else {
+    studiesHtml = p.studies.map((s) =>
+      '<article class="portrait-card studies">' +
+        '<h3>' + esc(s.title) + '</h3>' +
+        '<p>' + esc(s.text) + '</p>' +
+        confPips(s.confidence) +
+        (s.note ? '<p class="inspired">' + esc(s.note) + '</p>' : '') +
+        '<div class="porque"><strong>Por qu\u00e9</strong>' + esc(s.porQue) + citeHtml(s.cites) + '</div>' +
+      '</article>'
+    ).join('');
+  }
+  studiesHtml += lockedBox(p.studiesLocked.length, p.nextGate, p.missing, 'studies');
+  if (p.citesUsed && p.citesUsed.length) {
+    studiesHtml += '<div class="fuentes"><strong>Fuentes citadas.</strong> Solo estudios (o la encuesta de LG, claramente marcada) que he podido comprobar:<br>' +
+      p.citesUsed.map((c) => '\u00b7 ' + esc(c.short) + ': <a href="' + esc(c.url) + '" target="_blank" rel="noopener">' + esc(c.url) + '</a>').join('<br>') +
+      '</div>';
+  }
+
+  let beliefsHtml;
+  if (p.n < 5) {
+    beliefsHtml = '<div class="empty-portrait">Aqu\u00ed ir\u00e1n adivinaciones atrevidas, al estilo de un hor\u00f3scopo. Se desbloquean a las 5, 20 y 50 partidas.</div>';
+  } else if (!p.beliefs.length) {
+    beliefsHtml = '<div class="empty-portrait">A\u00fan no me atrevo a especular. Dame unas rondas m\u00e1s.</div>';
+  } else {
+    beliefsHtml = p.beliefs.map((b) =>
+      '<article class="portrait-card beliefs">' +
+        '<h3>' + esc(b.title) + '</h3>' +
+        '<p>' + esc(b.text) + '</p>' +
+        (b.inspired ? '<p class="inspired">Me inspir\u00e9 en: ' + esc(b.inspired) + '</p>' : '') +
+        confPips(b.confidence) +
+      '</article>'
+    ).join('');
+  }
+  beliefsHtml += lockedBox(p.beliefsLocked.length, p.nextGate, p.missing, 'beliefs');
+
+  root().innerHTML =
+    '<div class="screen">' +
+      '<div class="top-row">' +
+        '<button class="icon-btn" id="btnBack" aria-label="Volver">\u2190</button>' +
+        '<h2 style="font-size:1.15rem">Tu retrato</h2>' +
+        '<span style="width:46px"></span>' +
+      '</div>' +
+      '<p class="kicker">Lo que s\u00e9 \u00b7 lo que dicen los estudios \u00b7 lo que creo</p>' +
+      progress +
+      '<section class="sec-block facts">' +
+        '<p class="sec-kicker">Primera parte</p>' +
+        '<h2>Lo que s\u00e9 de ti</h2>' +
+        '<p class="sec-lead">Solo hechos que se ven en tus partidas, con recuentos. Sin interpretar.</p>' +
+        factsHtml +
+      '</section>' +
+      '<section class="sec-block studies">' +
+        '<p class="sec-kicker">Segunda parte</p>' +
+        '<h2>Lo que dicen los estudios</h2>' +
+        '<p class="sec-lead">Inferencias apoyadas en investigaciones reales, cada una con su cita. Si un patr\u00f3n tuyo va al contrario de lo habitual, tambi\u00e9n lo digo.</p>' +
+        studiesHtml +
+      '</section>' +
+      '<section class="sec-block beliefs">' +
+        '<p class="sec-kicker">Tercera parte</p>' +
+        '<h2>Lo que creo de ti</h2>' +
+        '<p class="sec-lead">Especulaciones atrevidas, al estilo de un hor\u00f3scopo: car\u00e1cter, \u00e1nimo, h\u00e1bitos. Van con un indicador de confianza, pero siguen siendo un juego.</p>' +
+        beliefsHtml +
+      '</section>' +
+      '<div class="disclaimer">Esto es un juego, no un diagn\u00f3stico. La primera parte son datos; la segunda, lecturas con estudios que he podido comprobar; la tercera es pura especulaci\u00f3n, tan libre como un hor\u00f3scopo. Nada de esto describe tu salud ni tu personalidad cl\u00ednica.</div>' +
+      '<div class="stack">' +
+        '<button class="btn btn-primary" id="btnPlay" type="button">Seguir jugando</button>' +
+        '<button class="btn btn-ghost" id="btnHome" type="button">Inicio</button>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('btnBack').onclick = () => renderHome();
+  document.getElementById('btnHome').onclick = () => renderHome();
+  document.getElementById('btnPlay').onclick = () => startRound();
+}
+
 function showStats() {
   const st = computeStats(store);
   const vs = st.n
@@ -1818,9 +1963,14 @@ function showStats() {
         'Fase actual: ' + (store.phase + 1) +
         '. Subes solo si acierto a la primera. Si acierto despu\u00e9s pero en \u226450% de los intentos, repetimos. Si tardo m\u00e1s, bajamos.' +
       '</p>' +
+      '<div class="stack" style="margin-top:12px">' +
+        '<button class="btn btn-ghost" id="btnPortrait2" type="button">Lo que s\u00e9 de ti</button>' +
+      '</div>' +
     '</div>';
   document.getElementById('btnBack').onclick = () => renderHome();
   document.getElementById('btnSettings').onclick = () => showSettings();
+  const bp2 = document.getElementById('btnPortrait2');
+  if (bp2) bp2.onclick = () => showPortrait();
 }
 
 function showSettings() {
@@ -1957,7 +2107,26 @@ function burstConfetti() {
 
 function registerSW() {
   if (!('serviceWorker' in navigator)) return;
-  navigator.serviceWorker.register('./sw.js').catch((e) => console.warn('SW', e));
+  navigator.serviceWorker.register('./sw.js').then((reg) => {
+    if (reg.waiting) {
+      try { reg.waiting.postMessage({ type: 'SKIP_WAITING' }); } catch (_) {}
+    }
+    reg.addEventListener('updatefound', () => {
+      const nw = reg.installing;
+      if (!nw) return;
+      nw.addEventListener('statechange', () => {
+        if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+          toast('Hay una versi\u00f3n nueva. Recarga la p\u00e1gina para verla.');
+        }
+      });
+    });
+  }).catch((e) => console.warn('SW', e));
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    location.reload();
+  });
 }
 
 function init() {

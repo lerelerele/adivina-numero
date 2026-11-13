@@ -1,12 +1,13 @@
 /* Oráculo service worker — cache-first for the app shell, network for APIs. */
 'use strict';
 
-const CACHE = 'oraculo-v1';
+const CACHE = 'oraculo-v2';
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
   './app.js',
+  './analysis.js',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -49,4 +50,8 @@ self.addEventListener('fetch', (event) => {
       return cached || fetched;
     })
   );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
